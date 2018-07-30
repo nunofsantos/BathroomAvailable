@@ -1,0 +1,5 @@
+arrow==0.12.1
+raspberry_utils==0.3.0
+requests==2.19.1
+RPi.GPIO==0.6.3
+web.py==0.39

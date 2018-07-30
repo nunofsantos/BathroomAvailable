@@ -1,0 +1,15 @@
+[Unit]
+Description=BathroomAvailable
+After=multi-user.target
+
+[Service]
+Type=idle
+User=pi
+Group=pi
+StandardOutput=null
+StandardError=null
+WorkingDirectory=/home/pi/BathroomAvailable
+ExecStart=/usr/bin/python /home/pi/BathroomAvailable/main.py
+
+[Install]
+WantedBy=multi-user.target
