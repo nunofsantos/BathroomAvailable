@@ -7,6 +7,7 @@ import RPi.GPIO as GPIO
 import web
 from web.webapi import BadRequest, Unauthorized
 
+from hipchat_notify import hipchat_notify
 from raspberrypi_utils.utils import ReadConfigMixin
 from raspberrypi_utils.input_devices import LightSensor
 
@@ -59,6 +60,35 @@ class BathroomAvailable(ReadConfigMixin):
             status='ON' if self.bathroom_status[bathroom_name] else 'OFF'
         )
         log.debug('Notification sent: {}'.format(self.bathroom_status))
+        if self.config['Main']['NOTIFICATION_HIPCHAT']:
+            self.send_notification_hipchat()
+
+    def send_notification_hipchat(self):
+        message = '<ul>'
+        for bathroom, occupied in self.bathroom_status.iteritems():
+            message += '<li> {} is {}'.format(
+                bathroom,
+                'occupied' if occupied else 'available'
+            )
+        message += '</ul>'
+        if all(self.bathroom_status.itervalues()):
+            color = 'red'
+        elif any(self.bathroom_status.itervalues()):
+            color = 'yellow'
+        else:
+            color = 'green'
+
+        try:
+            hipchat_notify(
+                self.config['HipChat']['AUTH_TOKEN'],
+                self.config['HipChat']['ROOM'],
+                message,
+                color=color,
+                format='html',
+                host=self.config['HipChat']['SERVER'],
+            )
+        except requests.HTTPError as e:
+            log.warn('HipChat notification failed to be sent: {}'.format(e))
 
     def update(self, light_on, bathroom_name=None):
         if bathroom_name is None:
@@ -77,11 +107,11 @@ class BathroomAvailable(ReadConfigMixin):
                     'Occupied': light_on,
                 },
                 headers={
-                    'Authorization': self.config['Main']['AUTH_TOKEN'],
+                    'Authorization': 'Bearer {}'.format(self.config['Main']['AUTH_TOKEN']),
                 }
             )
             if req.status_code != 200:
-                log.warn('Error sending bathroom status to master: {}', req.text)
+                log.warn('Error sending bathroom status to master: {}'.format(req.content))
 
     def status(self):
         return self.bathroom_status
