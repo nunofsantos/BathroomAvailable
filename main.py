@@ -6,10 +6,11 @@ from bathroomavailable import BathroomAvailable
 
 
 def main():
-    bathroom_available = BathroomAvailable()
-
+    bathroom_available = None
     try:
-        if bathroom_available.is_master:
+        bathroom_available = BathroomAvailable()
+
+        if bathroom_available.device_type == bathroom_available.MASTER:
             urls = (
                 '/GetBathroomStatus', 'bathroomavailable.GetBathroomStatus',
                 '/UpdateBathroomStatus', 'bathroomavailable.UpdateBathroomStatus',
@@ -18,10 +19,12 @@ def main():
             web_app = web.application(urls, globals())
             web_app.run()
         else:
+            # SLAVE or SOLO
             while True:
                 sleep(60)
     finally:
-        bathroom_available.cleanup()
+        if bathroom_available:
+            bathroom_available.cleanup()
 
 
 if __name__ == '__main__':

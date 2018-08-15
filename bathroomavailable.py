@@ -37,6 +37,16 @@ utils_log.addHandler(log_consolehandler)
 
 
 class BathroomAvailable(ReadConfigMixin):
+    SOLO = 'Solo'
+    MASTER = 'Master'
+    SLAVE = 'Slave'
+
+    DEVICE_TYPES = (
+        SOLO,
+        MASTER,
+        SLAVE,
+    )
+
     def __init__(self):
         super(BathroomAvailable, self).__init__()
         self.config = self.read_config()
@@ -47,8 +57,11 @@ class BathroomAvailable(ReadConfigMixin):
             on_threshold=self.config['Main']['LIGHT_ON_THRESHOLD'],
             frequency=1,
         )
-        self.is_master = self.config['Main']['MASTER']
-        if self.is_master:
+        if self.config['Main']['DEVICE_TYPE'] not in self.DEVICE_TYPES:
+            raise ValueError('Invalid device type in config.ini file: {}'.format(self.config['Main']['DEVICE_TYPE']))
+        else:
+            self.device_type = self.config['Main']['DEVICE_TYPE']
+        if self.device_type in [self.MASTER, self.SOLO]:
             self.bathroom_status = {
                 self.config['Main']['BATHROOM_NAME']: None
             }
@@ -94,12 +107,12 @@ class BathroomAvailable(ReadConfigMixin):
         if bathroom_name is None:
             bathroom_name = self.config['Main']['BATHROOM_NAME']
 
-        if self.is_master:
+        if self.device_type in [self.MASTER, self.SOLO]:
             previous_status = self.bathroom_status.get(bathroom_name, None)
             self.bathroom_status[bathroom_name] = light_on
             if previous_status != light_on:
                 self.send_notification(bathroom_name)
-        else:
+        elif self.device_type == self.SLAVE:
             req = requests.post(
                 self.config['Main']['MASTER_URL'],
                 data={
